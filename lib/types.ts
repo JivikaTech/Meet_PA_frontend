@@ -9,6 +9,7 @@ export interface TranscribeResponse {
   meetingId: string;
 }
 
+// Legacy summary response
 export interface SummaryResponse {
   tldr: string;
   key_points: string[];
@@ -24,3 +25,149 @@ export interface ApiResponse<T> {
 }
 
 export type ProcessingStep = 'idle' | 'uploading' | 'transcribing' | 'summarizing' | 'complete' | 'error';
+
+// ==========================================
+// NEW: Hierarchical Meeting Structure Types
+// ==========================================
+
+/**
+ * Meeting types for context-aware summarization
+ */
+export type MeetingType = 
+  | 'interview'
+  | 'standup'
+  | 'planning'
+  | 'review'
+  | 'customer_call'
+  | 'brainstorm'
+  | 'general'
+  | 'one_on_one';
+
+/**
+ * Processing strategy based on transcript length
+ */
+export type ProcessingStrategy = 'direct' | 'hierarchical' | 'map_reduce';
+
+/**
+ * Action item with optional owner
+ */
+export interface ActionItem {
+  task: string;
+  owner?: string;
+  dueDate?: string;
+  priority?: 'high' | 'medium' | 'low';
+}
+
+/**
+ * Section metadata
+ */
+export interface SectionMetadata {
+  speakers: string[];
+  keyPoints: string[];
+  decisions: string[];
+  actionItems: ActionItem[];
+  importance: 'high' | 'medium' | 'low';
+}
+
+/**
+ * Participant information
+ */
+export interface Participant {
+  name: string;
+  role?: string;
+  organization?: string;
+}
+
+/**
+ * Meeting context section
+ */
+export interface MeetingContext {
+  purpose: string;
+  participants: Participant[];
+  background: string;
+  date?: string;
+  duration?: string;
+}
+
+/**
+ * Meeting-level metadata
+ */
+export interface MeetingMetadata {
+  meetingType: MeetingType;
+  totalDuration: string;
+  processingStrategy: ProcessingStrategy;
+  generatedAt: string;
+  modelUsed: string;
+  totalSections: number;
+  totalActionItems: number;
+  totalDecisions: number;
+}
+
+/**
+ * Hierarchical section structure (recursive)
+ */
+export interface Section {
+  id: string;
+  heading: string;
+  level: 2 | 3 | 4;
+  content: string;
+  subsections?: Section[];
+  metadata: SectionMetadata;
+}
+
+/**
+ * Complete hierarchical meeting structure
+ */
+export interface MeetingStructure {
+  title: string;
+  context: MeetingContext;
+  sections: Section[];
+  metadata: MeetingMetadata;
+  legacy?: SummaryResponse;
+}
+
+/**
+ * Transcript analysis result
+ */
+export interface TranscriptAnalysis {
+  wordCount: number;
+  estimatedDurationMinutes: number;
+  speakerCount: number;
+  speakers: string[];
+  meetingType: MeetingType;
+  strategy: ProcessingStrategy;
+  complexity: 'low' | 'medium' | 'high';
+  topicIndicators: string[];
+  language: string;
+}
+
+/**
+ * Enhanced summary response
+ */
+export interface EnhancedSummaryResponse {
+  structure: MeetingStructure;
+  analysis: TranscriptAnalysis;
+  processingTime: number;
+}
+
+/**
+ * Request for enhanced summarization
+ */
+export interface EnhancedSummarizeRequest {
+  transcript: string;
+  meetingMetadata?: {
+    participants?: string[];
+    duration?: string;
+    type?: MeetingType;
+    date?: string;
+  };
+}
+
+/**
+ * Processing estimate response
+ */
+export interface ProcessingEstimate {
+  strategy: string;
+  estimatedSeconds: number;
+  estimatedDuration: string;
+}

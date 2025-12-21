@@ -1,4 +1,13 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
+import {
+  UploadResponse,
+  TranscribeResponse,
+  SummaryResponse,
+  EnhancedSummaryResponse,
+  EnhancedSummarizeRequest,
+  ProcessingEstimate,
+  MeetingType,
+} from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -36,7 +45,7 @@ class ApiClient {
 
         if (error.response) {
           // Server responded with error
-          const message = (error.response.data as any)?.message || error.message;
+          const message = (error.response.data as Record<string, unknown>)?.message as string || error.message;
           throw new Error(message);
         } else if (error.request) {
           // Request made but no response
@@ -49,7 +58,7 @@ class ApiClient {
     );
   }
 
-  async uploadAudio(file: File): Promise<any> {
+  async uploadAudio(file: File): Promise<UploadResponse> {
     const formData = new FormData();
     formData.append('audio', file);
 
@@ -62,7 +71,7 @@ class ApiClient {
     return response.data.data;
   }
 
-  async transcribeAudio(meetingId: string, s3Path: string): Promise<any> {
+  async transcribeAudio(meetingId: string, s3Path: string): Promise<TranscribeResponse> {
     const response = await this.client.post('/api/transcribe', {
       meetingId,
       s3Path,
@@ -71,8 +80,59 @@ class ApiClient {
     return response.data.data;
   }
 
-  async generateSummary(transcript: string): Promise<any> {
+  /**
+   * Legacy: Generate simple flat summary
+   */
+  async generateSummary(transcript: string): Promise<SummaryResponse> {
     const response = await this.client.post('/api/summarize', {
+      transcript,
+    });
+
+    return response.data.data;
+  }
+
+  /**
+   * Enhanced: Generate hierarchical meeting structure
+   */
+  async generateEnhancedSummary(
+    transcript: string,
+    metadata?: {
+      participants?: string[];
+      duration?: string;
+      type?: MeetingType;
+      date?: string;
+    }
+  ): Promise<EnhancedSummaryResponse> {
+    const request: EnhancedSummarizeRequest = {
+      transcript,
+      meetingMetadata: metadata,
+    };
+
+    const response = await this.client.post('/api/summarize/v2', request);
+
+    return response.data.data;
+  }
+
+  /**
+   * Get estimated processing time for a transcript
+   */
+  async estimateProcessingTime(transcript: string): Promise<ProcessingEstimate> {
+    const response = await this.client.post('/api/summarize/estimate', {
+      transcript,
+    });
+
+    return response.data.data;
+  }
+
+  /**
+   * Validate transcript before processing
+   */
+  async validateTranscript(transcript: string): Promise<{
+    valid: boolean;
+    errors: string[];
+    warnings: string[];
+  }> {
+    const response = await this.client.post('/api/summarize/validate', {
       transcript,
     });
 
