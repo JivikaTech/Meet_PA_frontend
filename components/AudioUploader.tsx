@@ -60,23 +60,31 @@ export default function AudioUploader({ onFileSelect, isProcessing }: AudioUploa
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-all ${
+        className={`rounded-xl p-12 text-center cursor-pointer transition-all ${
           isDragActive
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-300 hover:border-gray-400'
+            ? 'border-2 border-indigo-500 bg-indigo-50'
+            : 'border-0 hover:bg-slate-100/50'
         } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <input {...getInputProps()} />
-        <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+        <div className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center transition-all ${
+          isDragActive 
+            ? 'bg-indigo-100 scale-110' 
+            : 'bg-slate-100'
+        }`}>
+          <Upload className={`w-8 h-8 transition-colors ${
+            isDragActive ? 'text-indigo-600' : 'text-slate-400'
+          }`} />
+        </div>
         {isDragActive ? (
-          <p className="text-lg text-blue-600">Drop the audio file here...</p>
+          <p className="text-lg font-medium text-indigo-600">Drop the audio file here...</p>
         ) : (
           <div>
-            <p className="text-lg mb-2">Drag & drop an audio file here, or click to select</p>
-            <p className="text-sm text-gray-500">
+            <p className="text-lg font-medium text-slate-900 mb-2">Drag & drop an audio file here, or click to select</p>
+            <p className="text-sm text-slate-500">
               Supports: MP3, WAV, M4A, WebM, OGG (Max: 100MB)
             </p>
           </div>
@@ -84,21 +92,23 @@ export default function AudioUploader({ onFileSelect, isProcessing }: AudioUploa
       </div>
 
       {selectedFile && (
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <div className="flex items-start justify-between">
+        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+          <div className="flex items-start justify-between mb-4">
             <div className="flex items-start space-x-3 flex-1">
-              <File className="w-10 h-10 text-blue-500 flex-shrink-0 mt-1" />
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                <File className="w-6 h-6 text-white" />
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 truncate">{selectedFile.name}</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {formatFileSize(selectedFile.size)} • {selectedFile.type}
+                <p className="font-semibold text-slate-900 truncate">{selectedFile.name}</p>
+                <p className="text-sm text-slate-500 mt-1">
+                  {formatFileSize(selectedFile.size)} • {selectedFile.type.split('/')[1].toUpperCase()}
                 </p>
               </div>
             </div>
             {!isProcessing && (
               <button
                 onClick={handleRemove}
-                className="text-gray-400 hover:text-red-500 transition-colors ml-2"
+                className="text-slate-400 hover:text-red-500 transition-colors ml-2 p-1 hover:bg-red-50 rounded-lg"
                 aria-label="Remove file"
               >
                 <X className="w-5 h-5" />
@@ -109,7 +119,7 @@ export default function AudioUploader({ onFileSelect, isProcessing }: AudioUploa
           {!isProcessing && (
             <button
               onClick={handleProcess}
-              className="w-full mt-4 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3.5 px-4 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40"
             >
               Process Audio
             </button>

@@ -7,6 +7,10 @@ import {
   EnhancedSummarizeRequest,
   ProcessingEstimate,
   MeetingType,
+  ChatResponsePayload,
+  MeetingListItem,
+  AnalyticsOverview,
+  IngestMeetingResponse,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -146,6 +150,53 @@ class ApiClient {
     } catch {
       return false;
     }
+  }
+
+  async ingestMeeting(params: {
+    transcript: string;
+    tenantId?: string;
+    meetingId?: string;
+    metadata?: {
+      title?: string;
+      participants?: string[];
+      duration?: string;
+      type?: MeetingType;
+      date?: string;
+    };
+  }): Promise<IngestMeetingResponse> {
+    const response = await this.client.post('/api/meetings/ingest', params);
+    return response.data.data;
+  }
+
+  async listMeetings(tenantId?: string): Promise<MeetingListItem[]> {
+    const response = await this.client.get('/api/meetings', {
+      params: { tenantId },
+    });
+    return response.data.data;
+  }
+
+  async getMeeting(meetingId: string, tenantId?: string): Promise<unknown> {
+    const response = await this.client.get(`/api/meetings/${meetingId}`, {
+      params: { tenantId },
+    });
+    return response.data.data;
+  }
+
+  async askChat(params: {
+    question: string;
+    meetingId?: string;
+    tenantId?: string;
+    limit?: number;
+  }): Promise<ChatResponsePayload> {
+    const response = await this.client.post('/api/chat', params);
+    return response.data.data;
+  }
+
+  async getAnalyticsOverview(tenantId?: string): Promise<AnalyticsOverview> {
+    const response = await this.client.get('/api/analytics/overview', {
+      params: { tenantId },
+    });
+    return response.data.data;
   }
 }
 

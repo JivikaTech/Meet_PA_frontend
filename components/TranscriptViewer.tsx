@@ -25,19 +25,19 @@ export default function TranscriptViewer({ transcript }: TranscriptViewerProps) 
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">Transcript</h2>
-        <div className="flex space-x-2">
+    <div className="max-w-5xl mx-auto bg-white rounded-xl border border-slate-200 overflow-hidden shadow-lg">
+      <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-slate-900">Full Transcript</h2>
+        <div className="flex gap-2">
           <button
             onClick={() => setIsEditing(!isEditing)}
-            className="px-3 py-1.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition-colors"
+            className="px-3 py-2 text-sm bg-white hover:bg-slate-100 text-slate-700 rounded-lg border border-slate-200 transition-colors font-medium"
           >
             {isEditing ? 'Done' : 'Edit'}
           </button>
           <button
             onClick={handleCopy}
-            className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition-colors font-medium"
           >
             {copied ? (
               <>
@@ -59,12 +59,12 @@ export default function TranscriptViewer({ transcript }: TranscriptViewerProps) 
           <textarea
             value={editedTranscript}
             onChange={(e) => setEditedTranscript(e.target.value)}
-            className="w-full h-96 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-sm"
+            className="w-full h-96 p-4 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:border-transparent resize-none font-mono text-sm bg-slate-50 text-slate-800"
             placeholder="Edit your transcript here..."
           />
         ) : (
-          <div className="prose max-w-none">
-            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+          <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
+            <p className="text-slate-700 leading-relaxed whitespace-pre-wrap font-mono text-sm">
               {editedTranscript}
             </p>
           </div>

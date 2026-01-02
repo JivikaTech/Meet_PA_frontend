@@ -171,3 +171,39 @@ export interface ProcessingEstimate {
   estimatedSeconds: number;
   estimatedDuration: string;
 }
+
+export interface MeetingListItem {
+  meetingId: string;
+  title?: string;
+  meetingType: MeetingType;
+  createdAt: string;
+  durationMinutes?: number;
+  speakerCount?: number;
+  wordCount?: number;
+}
+
+export interface ChatSource {
+  meetingId: string;
+  chunkId: string;
+  content: string;
+  score: number;
+  meetingType?: MeetingType;
+}
+
+export interface ChatResponsePayload {
+  answer: string;
+  sources: ChatSource[];
+}
+
+export interface IngestMeetingResponse extends EnhancedSummaryResponse {
+  meetingId: string;
+}
+
+export interface AnalyticsOverview {
+  totalMeetings: number;
+  totalDurationMinutes: number;
+  averageDurationMinutes: number;
+  averageWordCount: number;
+  meetingTypes: Record<string, number>;
+  recentMeetings: MeetingListItem[];
+}

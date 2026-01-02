@@ -138,18 +138,18 @@ export default function AudioRecorder({ onRecordingComplete, isProcessing }: Aud
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-8 text-center border border-blue-100">
+    <div className="space-y-5">
+      <div className="rounded-xl p-10 text-center">
         {!isRecording && !audioBlob && (
           <div>
-            <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-500/30">
               <Mic className="w-10 h-10 text-white" />
             </div>
-            <p className="text-lg mb-4 text-gray-700">Ready to record your meeting</p>
+            <p className="text-lg font-medium text-slate-900 mb-6">Ready to record your meeting</p>
             <button
               onClick={startRecording}
               disabled={isProcessing}
-              className="bg-blue-600 text-white py-3 px-8 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3.5 px-10 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40"
             >
               Start Recording
             </button>
@@ -158,20 +158,24 @@ export default function AudioRecorder({ onRecordingComplete, isProcessing }: Aud
 
         {isRecording && (
           <div>
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}`}>
+            <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg ${
+              isPaused 
+                ? 'bg-gradient-to-br from-amber-500 to-orange-500 shadow-amber-500/30' 
+                : 'bg-gradient-to-br from-red-500 to-rose-500 animate-pulse shadow-red-500/30'
+            }`}>
               <Mic className="w-10 h-10 text-white" />
             </div>
-            <div className="text-4xl font-mono font-bold text-gray-800 mb-4">
+            <div className="text-5xl font-mono font-bold text-slate-900 mb-3">
               {formatTime(recordingTime)}
             </div>
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-sm font-medium text-slate-600 mb-8">
               {isPaused ? 'Recording paused' : 'Recording in progress...'}
             </p>
-            <div className="flex justify-center space-x-3">
+            <div className="flex justify-center gap-3">
               {!isPaused ? (
                 <button
                   onClick={pauseRecording}
-                  className="bg-yellow-500 text-white py-2 px-6 rounded-lg font-medium hover:bg-yellow-600 transition-colors flex items-center space-x-2"
+                  className="bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 px-7 rounded-xl font-semibold hover:from-amber-600 hover:to-orange-600 transition-all flex items-center gap-2 shadow-lg shadow-amber-500/30"
                 >
                   <Pause className="w-5 h-5" />
                   <span>Pause</span>
@@ -179,7 +183,7 @@ export default function AudioRecorder({ onRecordingComplete, isProcessing }: Aud
               ) : (
                 <button
                   onClick={resumeRecording}
-                  className="bg-green-500 text-white py-2 px-6 rounded-lg font-medium hover:bg-green-600 transition-colors flex items-center space-x-2"
+                  className="bg-gradient-to-r from-emerald-500 to-green-500 text-white py-3 px-7 rounded-xl font-semibold hover:from-emerald-600 hover:to-green-600 transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/30"
                 >
                   <Play className="w-5 h-5" />
                   <span>Resume</span>
@@ -187,7 +191,7 @@ export default function AudioRecorder({ onRecordingComplete, isProcessing }: Aud
               )}
               <button
                 onClick={stopRecording}
-                className="bg-red-600 text-white py-2 px-6 rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center space-x-2"
+                className="bg-gradient-to-r from-red-600 to-rose-600 text-white py-3 px-7 rounded-xl font-semibold hover:from-red-700 hover:to-rose-700 transition-all flex items-center gap-2 shadow-lg shadow-red-500/30"
               >
                 <Square className="w-5 h-5" />
                 <span>Stop</span>
@@ -198,24 +202,24 @@ export default function AudioRecorder({ onRecordingComplete, isProcessing }: Aud
 
         {!isRecording && audioBlob && (
           <div>
-            <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-green-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/30">
               <Mic className="w-10 h-10 text-white" />
             </div>
-            <p className="text-lg font-medium text-gray-800 mb-2">Recording Complete</p>
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-xl font-semibold text-slate-900 mb-2">Recording Complete!</p>
+            <p className="text-sm text-slate-600 mb-8">
               Duration: {formatTime(recordingTime)} • Size: {(audioBlob.size / 1024 / 1024).toFixed(2)} MB
             </p>
             {!isProcessing && (
-              <div className="flex justify-center space-x-3">
+              <div className="flex justify-center gap-3">
                 <button
                   onClick={handleReset}
-                  className="bg-gray-500 text-white py-2 px-6 rounded-lg font-medium hover:bg-gray-600 transition-colors"
+                  className="bg-slate-200 text-slate-700 py-3 px-7 rounded-xl font-semibold hover:bg-slate-300 transition-all"
                 >
                   Record Again
                 </button>
                 <button
                   onClick={handleProcess}
-                  className="bg-blue-600 text-white py-2 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-7 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40"
                 >
                   Process Recording
                 </button>
@@ -225,8 +229,8 @@ export default function AudioRecorder({ onRecordingComplete, isProcessing }: Aud
         )}
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
+      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl p-4">
+        <p className="text-sm text-indigo-900">
           <strong>Tip:</strong> Make sure you&apos;re in a quiet environment for the best transcription quality.
         </p>
       </div>
