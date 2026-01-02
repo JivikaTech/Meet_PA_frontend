@@ -11,6 +11,10 @@ import {
   MeetingListItem,
   AnalyticsOverview,
   IngestMeetingResponse,
+  ChatSession,
+  CreateChatSessionRequest,
+  UpdateChatSessionRequest,
+  AddMessageRequest,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -228,6 +232,44 @@ class ApiClient {
       params: resolvedTenant ? { tenantId: resolvedTenant } : undefined,
     });
     return response.data.data;
+  }
+
+  // ==========================================
+  // Chat History Methods
+  // ==========================================
+
+  async createChatSession(params: CreateChatSessionRequest): Promise<ChatSession> {
+    const response = await this.client.post('/api/chat/sessions', params);
+    return response.data.data;
+  }
+
+  async getChatSession(sessionId: string): Promise<ChatSession> {
+    const response = await this.client.get(`/api/chat/sessions/${sessionId}`);
+    return response.data.data;
+  }
+
+  async listChatSessions(limit?: number): Promise<ChatSession[]> {
+    const response = await this.client.get('/api/chat/sessions', {
+      params: limit ? { limit: limit.toString() } : undefined,
+    });
+    return response.data.data;
+  }
+
+  async addMessageToSession(sessionId: string, params: AddMessageRequest): Promise<ChatSession> {
+    const response = await this.client.post(
+      `/api/chat/sessions/${sessionId}/messages`,
+      params
+    );
+    return response.data.data;
+  }
+
+  async updateChatSession(sessionId: string, params: UpdateChatSessionRequest): Promise<ChatSession> {
+    const response = await this.client.patch(`/api/chat/sessions/${sessionId}`, params);
+    return response.data.data;
+  }
+
+  async deleteChatSession(sessionId: string): Promise<void> {
+    await this.client.delete(`/api/chat/sessions/${sessionId}`);
   }
 }
 

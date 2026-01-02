@@ -3,7 +3,13 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
-import { ChatResponsePayload, MeetingListItem, AnalyticsOverview } from '@/lib/types';
+import {
+  ChatResponsePayload,
+  MeetingListItem,
+  AnalyticsOverview,
+  ChatSession,
+  ChatMessage,
+} from '@/lib/types';
 import { Toaster, toast } from 'sonner';
 import { useSession } from 'next-auth/react';
 import {
@@ -25,20 +31,8 @@ import {
   Send,
   User,
   Bot,
+  Trash2,
 } from 'lucide-react';
-
-type ChatMessage = {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  sources?: ChatResponsePayload['sources'];
-};
-
-type ChatSession = {
-  id: string;
-  title: string;
-  timestamp: Date;
-};
 
 export default function ChatPage() {
   const { data: session, status } = useSession();
@@ -55,6 +49,7 @@ export default function ChatPage() {
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | undefined>(defaultWorkspaceId);
+  const [loadingSessions, setLoadingSessions] = useState(false);
   const tenantId = activeWorkspaceId || defaultWorkspaceId || process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID || 'default';
 
   useEffect(() => {
@@ -71,14 +66,19 @@ export default function ChatPage() {
     const load = async () => {
       if (status !== 'authenticated' || !accessToken) return;
       try {
-        const [meetingList, overview] = await Promise.all([
+        setLoadingSessions(true);
+        const [meetingList, overview, sessions] = await Promise.all([
           apiClient.listMeetings(tenantId),
           apiClient.getAnalyticsOverview(tenantId),
+          apiClient.listChatSessions(50),
         ]);
         setMeetings(meetingList);
         setAnalytics(overview);
+        setChatSessions(sessions);
       } catch (error) {
         toast.error((error as Error).message);
+      } finally {
+        setLoadingSessions(false);
       }
     };
     if (tenantId) {
@@ -89,14 +89,17 @@ export default function ChatPage() {
   useEffect(() => {
     setSelectedMeeting(undefined);
     setMessages([]);
+    setCurrentSessionId('');
   }, [tenantId]);
 
   const handleAsk = async () => {
     if (!question.trim()) return;
+    const now = new Date().toISOString();
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
       content: question.trim(),
+      timestamp: now,
     };
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
@@ -113,22 +116,45 @@ export default function ChatPage() {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: response.answer,
+        timestamp: new Date().toISOString(),
         sources: response.sources,
       };
       setMessages((prev) => [...prev, assistantMessage]);
       
-      // Update chat session if it's the first message
+      // Create or update chat session
       if (messages.length === 0 && !currentSessionId) {
-        const newSessionId = crypto.randomUUID();
-        setCurrentSessionId(newSessionId);
-        setChatSessions((prev) => [
-          {
-            id: newSessionId,
-            title: userMessage.content.slice(0, 50),
-            timestamp: new Date(),
-          },
-          ...prev,
-        ]);
+        // First message - create new session
+        const session = await apiClient.createChatSession({
+          title: userMessage.content.slice(0, 50),
+          meetingId: selectedMeeting,
+          firstMessage: userMessage,
+        });
+        setCurrentSessionId(session.sessionId);
+        
+        // Add assistant message to session
+        await apiClient.addMessageToSession(session.sessionId, {
+          message: assistantMessage,
+        });
+        
+        // Update local sessions list
+        setChatSessions((prev) => [session, ...prev]);
+      } else if (currentSessionId) {
+        // Add messages to existing session
+        await apiClient.addMessageToSession(currentSessionId, {
+          message: userMessage,
+        });
+        await apiClient.addMessageToSession(currentSessionId, {
+          message: assistantMessage,
+        });
+        
+        // Update session in local state
+        setChatSessions((prev) =>
+          prev.map((s) =>
+            s.sessionId === currentSessionId
+              ? { ...s, lastMessageAt: assistantMessage.timestamp }
+              : s
+          )
+        );
       }
     } catch (error) {
       toast.error((error as Error).message);
@@ -141,6 +167,33 @@ export default function ChatPage() {
     setMessages([]);
     setCurrentSessionId('');
     setQuestion('');
+  };
+
+  const handleLoadSession = async (sessionId: string) => {
+    try {
+      const session = await apiClient.getChatSession(sessionId);
+      setMessages(session.messages);
+      setCurrentSessionId(session.sessionId);
+      if (session.meetingId) {
+        setSelectedMeeting(session.meetingId);
+      }
+    } catch (error) {
+      toast.error('Failed to load chat session');
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    try {
+      await apiClient.deleteChatSession(sessionId);
+      setChatSessions((prev) => prev.filter((s) => s.sessionId !== sessionId));
+      if (currentSessionId === sessionId) {
+        handleNewChat();
+      }
+      toast.success('Chat deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete chat session');
+    }
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -245,26 +298,44 @@ export default function ChatPage() {
           </Link>
 
           {/* Chat History */}
-          {chatSessions.length > 0 && (
+          {loadingSessions ? (
+            <div className="pt-4 mt-4 border-t border-gray-800 px-4">
+              <div className="flex items-center gap-2 text-gray-500 text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading chats...
+              </div>
+            </div>
+          ) : chatSessions.length > 0 ? (
             <div className="pt-4 mt-4 border-t border-gray-800">
               <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase mb-2">Recent Chats</h3>
               <div className="space-y-1">
                 {chatSessions.map((session) => (
-                  <button
-                    key={session.id}
-                    onClick={() => setCurrentSessionId(session.id)}
-                    className={`w-full text-left px-4 py-2 rounded-lg text-sm transition truncate ${
-                      session.id === currentSessionId
+                  <div
+                    key={session.sessionId}
+                    className={`group relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition ${
+                      session.sessionId === currentSessionId
                         ? 'bg-[#1a1a1a] text-gray-200'
                         : 'text-gray-400 hover:bg-[#1a1a1a] hover:text-gray-200'
                     }`}
                   >
-                    {session.title}
-                  </button>
+                    <button
+                      onClick={() => handleLoadSession(session.sessionId)}
+                      className="flex-1 text-left truncate"
+                    >
+                      {session.title}
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteSession(session.sessionId, e)}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded transition"
+                      title="Delete chat"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
         </nav>
 
         {/* Search */}
@@ -399,7 +470,7 @@ export default function ChatPage() {
                         <div className="space-y-2">
                           {msg.sources.map((src, idx) => (
                             <div
-                              key={src.chunkId}
+                              key={`${src.meetingId}-${src.chunkId}-${idx}`}
                               className="border border-gray-800 rounded-lg p-3 bg-[#1a1a1a] text-xs"
                             >
                               <p className="font-medium text-gray-300 mb-1">

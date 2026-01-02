@@ -225,3 +225,48 @@ export interface AuthResponsePayload {
   };
   workspaces: WorkspaceMembership[];
 }
+
+// ==========================================
+// Chat History Types
+// ==========================================
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  sources?: Array<{
+    meetingId: string;
+    chunkId: string;
+    content: string;
+    score: number;
+  }>;
+}
+
+export interface ChatSession {
+  sessionId: string;
+  tenantId: string;
+  userId?: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: string;
+  updatedAt: string;
+  lastMessageAt: string;
+  meetingId?: string;
+  isDeleted?: boolean;
+}
+
+export interface CreateChatSessionRequest {
+  title: string;
+  meetingId?: string;
+  firstMessage?: ChatMessage;
+}
+
+export interface UpdateChatSessionRequest {
+  title?: string;
+  messages?: ChatMessage[];
+}
+
+export interface AddMessageRequest {
+  message: ChatMessage;
+}
