@@ -21,14 +21,14 @@ interface ProcessingOptions {
   };
 }
 
-export function useAudioProcessing() {
+export function useAudioProcessing(workspaceId?: string) {
   const [currentStep, setCurrentStep] = useState<ProcessingStep>('idle');
   const [transcript, setTranscript] = useState<string>('');
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [enhancedSummary, setEnhancedSummary] = useState<EnhancedSummaryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [meetingId, setMeetingId] = useState<string>('');
-  const tenantId = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID || 'default';
+  const tenantId = workspaceId || process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID || 'default';
   const [processingInfo, setProcessingInfo] = useState<{
     strategy?: string;
     estimatedSeconds?: number;
@@ -60,6 +60,8 @@ export function useAudioProcessing() {
       // Step 3: Generate summary
       setCurrentStep('summarizing');
       
+      let enhancedResponse: EnhancedSummaryResponse | null = null;
+
       if (options.useEnhanced) {
         // Get processing estimate first
         try {
@@ -77,7 +79,7 @@ export function useAudioProcessing() {
         }
 
         // Generate enhanced hierarchical summary
-        const enhancedResponse = await apiClient.generateEnhancedSummary(
+        enhancedResponse = await apiClient.generateEnhancedSummary(
           transcribeResponse.transcript,
           {
             ...options.meetingMetadata,
@@ -104,34 +106,33 @@ export function useAudioProcessing() {
         toast.success('Summary generated!', { id: 'summarize' });
       }
 
-      // Complete UI now; run ingestion in background to keep UX responsive
+      // Complete UI now; run ingestion immediately so chat has context
+      if (options.useEnhanced && enhancedResponse) {
+        toast.loading('Indexing meeting for Q&A...', { id: 'ingest' });
+        try {
+          await apiClient.ingestMeeting({
+            transcript: transcribeResponse.transcript,
+            meetingId: uploadResponse.meetingId,
+            tenantId,
+            metadata: {
+              title: enhancedResponse.structure.title,
+              duration: options.meetingMetadata?.duration,
+              participants: options.meetingMetadata?.participants,
+              type: options.meetingMetadata?.type,
+              date: options.meetingMetadata?.date || new Date().toISOString(),
+            },
+          });
+          toast.success('Meeting indexed for chat', { id: 'ingest' });
+        } catch (ingestError) {
+          const message =
+            ingestError instanceof Error ? ingestError.message : 'Indexing failed';
+          toast.error(`Indexing failed: ${message}`, { id: 'ingest' });
+          throw ingestError;
+        }
+      }
+
       setCurrentStep('complete');
       toast.success('All done! Your meeting notes are ready.', { id: 'complete' });
-
-      if (options.useEnhanced) {
-        void (async () => {
-          toast.loading('Indexing meeting for Q&A...', { id: 'ingest' });
-          try {
-            await apiClient.ingestMeeting({
-              transcript: transcribeResponse.transcript,
-              meetingId: uploadResponse.meetingId,
-              tenantId,
-              metadata: {
-                title: enhancedResponse.structure.title,
-                duration: options.meetingMetadata?.duration,
-                participants: options.meetingMetadata?.participants,
-                type: options.meetingMetadata?.type,
-                date: options.meetingMetadata?.date || new Date().toISOString(),
-              },
-            });
-            toast.success('Meeting indexed for chat', { id: 'ingest' });
-          } catch (ingestError) {
-            const message =
-              ingestError instanceof Error ? ingestError.message : 'Indexing failed';
-            toast.error(`Indexing failed: ${message}`, { id: 'ingest' });
-          }
-        })();
-      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);

@@ -17,6 +17,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 class ApiClient {
   private client: AxiosInstance;
+  private auth: { token?: string; workspaceId?: string } = {};
 
   constructor() {
     this.client = axios.create({
@@ -30,6 +31,17 @@ class ApiClient {
     // Request interceptor
     this.client.interceptors.request.use(
       (config) => {
+        // Preserve existing headers (important for FormData)
+        if (!config.headers) {
+          config.headers = {} as any;
+        }
+        
+        if (this.auth.token) {
+          config.headers['Authorization'] = `Bearer ${this.auth.token}`;
+        }
+        if (this.auth.workspaceId) {
+          config.headers['X-Workspace-Id'] = this.auth.workspaceId;
+        }
         console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
         return config;
       },
@@ -62,6 +74,14 @@ class ApiClient {
     );
   }
 
+  setAuth(auth: { token?: string; workspaceId?: string }) {
+    this.auth = auth;
+  }
+
+  private resolveTenant(tenantId?: string) {
+    return tenantId || this.auth.workspaceId;
+  }
+
   async uploadAudio(file: File): Promise<UploadResponse> {
     const formData = new FormData();
     formData.append('audio', file);
@@ -70,6 +90,8 @@ class ApiClient {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      // Preserve FormData; don't let axios stringify
+      transformRequest: (data) => data,
     });
 
     return response.data.data;
@@ -164,20 +186,25 @@ class ApiClient {
       date?: string;
     };
   }): Promise<IngestMeetingResponse> {
-    const response = await this.client.post('/api/meetings/ingest', params);
+    const response = await this.client.post('/api/meetings/ingest', {
+      ...params,
+      tenantId: this.resolveTenant(params.tenantId),
+    });
     return response.data.data;
   }
 
   async listMeetings(tenantId?: string): Promise<MeetingListItem[]> {
+    const resolvedTenant = this.resolveTenant(tenantId);
     const response = await this.client.get('/api/meetings', {
-      params: { tenantId },
+      params: resolvedTenant ? { tenantId: resolvedTenant } : undefined,
     });
     return response.data.data;
   }
 
   async getMeeting(meetingId: string, tenantId?: string): Promise<unknown> {
+    const resolvedTenant = this.resolveTenant(tenantId);
     const response = await this.client.get(`/api/meetings/${meetingId}`, {
-      params: { tenantId },
+      params: resolvedTenant ? { tenantId: resolvedTenant } : undefined,
     });
     return response.data.data;
   }
@@ -188,13 +215,17 @@ class ApiClient {
     tenantId?: string;
     limit?: number;
   }): Promise<ChatResponsePayload> {
-    const response = await this.client.post('/api/chat', params);
+    const response = await this.client.post('/api/chat', {
+      ...params,
+      tenantId: this.resolveTenant(params.tenantId),
+    });
     return response.data.data;
   }
 
   async getAnalyticsOverview(tenantId?: string): Promise<AnalyticsOverview> {
+    const resolvedTenant = this.resolveTenant(tenantId);
     const response = await this.client.get('/api/analytics/overview', {
-      params: { tenantId },
+      params: resolvedTenant ? { tenantId: resolvedTenant } : undefined,
     });
     return response.data.data;
   }

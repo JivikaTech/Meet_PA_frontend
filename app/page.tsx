@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { Toaster } from 'sonner';
 import AudioUploader from '@/components/AudioUploader';
 import AudioRecorder from '@/components/AudioRecorder';
@@ -8,6 +10,7 @@ import LoadingStates from '@/components/LoadingStates';
 import TranscriptViewer from '@/components/TranscriptViewer';
 import SummaryPanel from '@/components/SummaryPanel';
 import { useAudioProcessing } from '@/hooks/useAudioProcessing';
+import { apiClient } from '@/lib/api-client';
 import { 
   Mic, 
   Upload as UploadIcon, 
@@ -23,6 +26,9 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
+  const { data: session, status } = useSession();
+  const workspaceId = (session?.user as { workspaceId?: string } | undefined)?.workspaceId;
+  const accessToken = (session as Record<string, unknown> | null)?.accessToken as string | undefined;
   const [activeTab, setActiveTab] = useState<'upload' | 'record'>('upload');
   const [viewMode, setViewMode] = useState<'summary' | 'transcript'>('summary');
   const { 
@@ -35,7 +41,13 @@ export default function Home() {
     reset, 
     isProcessing,
     processingInfo 
-  } = useAudioProcessing();
+  } = useAudioProcessing(workspaceId);
+
+  useEffect(() => {
+    if (accessToken) {
+      apiClient.setAuth({ token: accessToken, workspaceId });
+    }
+  }, [accessToken, workspaceId]);
 
   const handleFileSelect = (file: File) => {
     processAudio(file, { useEnhanced: true });
@@ -45,6 +57,41 @@ export default function Home() {
     reset();
     setViewMode('summary');
   };
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <p className="text-slate-600 text-sm">Loading your workspace...</p>
+      </div>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center px-4">
+        <div className="max-w-lg w-full bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-900/5 p-10 space-y-6 text-center">
+          <h1 className="text-3xl font-bold text-slate-900">Welcome to Meet PA</h1>
+          <p className="text-slate-600">
+            Sign up or log in to record meetings, generate summaries, and chat with your meeting context.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <Link
+              href="/signup"
+              className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition"
+            >
+              Create account
+            </Link>
+            <Link
+              href="/login"
+              className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-800 font-semibold hover:bg-slate-50 transition"
+            >
+              Sign in
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Check if we have any summary available
   const hasSummary = enhancedSummary || summary;
@@ -103,13 +150,13 @@ export default function Home() {
               </button>
             )}
 
-            <a
+            <Link
               href="/chat"
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all"
             >
               <MessageSquare className="w-4 h-4" />
               Chat
-            </a>
+            </Link>
           </div>
         </div>
       </header>
@@ -292,13 +339,13 @@ export default function Home() {
                     )}
                   </div>
                 </div>
-                <a
+                <Link
                   href="/chat"
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 font-medium"
                 >
                   Start chatting
                   <ArrowRight className="w-4 h-4" />
-                </a>
+                </Link>
               </div>
             </div>
 

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { ChatResponsePayload, MeetingListItem, AnalyticsOverview } from '@/lib/types';
 import { Toaster, toast } from 'sonner';
+import { useSession } from 'next-auth/react';
 import {
   MessageCircle,
   BarChart3,
@@ -40,6 +41,11 @@ type ChatSession = {
 };
 
 export default function ChatPage() {
+  const { data: session, status } = useSession();
+  const accessToken = (session as Record<string, unknown> | null)?.accessToken as string | undefined;
+  const defaultWorkspaceId = (session?.user as { workspaceId?: string } | undefined)?.workspaceId;
+  const workspaces = (session?.user as { workspaces?: Array<{ workspaceId: string; workspaceName: string }> } | undefined)
+    ?.workspaces || [];
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [question, setQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -48,10 +54,22 @@ export default function ChatPage() {
   const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
-  const tenantId = process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID || 'default';
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | undefined>(defaultWorkspaceId);
+  const tenantId = activeWorkspaceId || defaultWorkspaceId || process.env.NEXT_PUBLIC_DEFAULT_TENANT_ID || 'default';
+
+  useEffect(() => {
+    setActiveWorkspaceId(defaultWorkspaceId);
+  }, [defaultWorkspaceId]);
+
+  useEffect(() => {
+    if (accessToken) {
+      apiClient.setAuth({ token: accessToken, workspaceId: tenantId });
+    }
+  }, [accessToken, tenantId]);
 
   useEffect(() => {
     const load = async () => {
+      if (status !== 'authenticated' || !accessToken) return;
       try {
         const [meetingList, overview] = await Promise.all([
           apiClient.listMeetings(tenantId),
@@ -63,7 +81,14 @@ export default function ChatPage() {
         toast.error((error as Error).message);
       }
     };
-    load();
+    if (tenantId) {
+      load();
+    }
+  }, [tenantId, status, accessToken]);
+
+  useEffect(() => {
+    setSelectedMeeting(undefined);
+    setMessages([]);
   }, [tenantId]);
 
   const handleAsk = async () => {
@@ -142,6 +167,41 @@ export default function ChatPage() {
     'Summarize discussions about project deadlines',
     'What topics were discussed most frequently?',
   ];
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0f0f0f] text-gray-200">
+        <p className="text-sm text-gray-400">Loading your workspace...</p>
+      </div>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0f0f0f] text-gray-200">
+        <div className="bg-[#1a1a1a] border border-gray-800 rounded-2xl p-10 text-center space-y-4 max-w-md">
+          <h1 className="text-2xl font-semibold">Sign in to chat</h1>
+          <p className="text-gray-400 text-sm">
+            Connect your account to query your meetings and analytics.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <Link
+              href="/login"
+              className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/signup"
+              className="px-4 py-2 rounded-lg border border-gray-700 text-gray-200 text-sm font-semibold hover:bg-[#252525] transition"
+            >
+              Create account
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-[#1a1a1a] text-gray-100 overflow-hidden">
@@ -228,6 +288,25 @@ export default function ChatPage() {
           </div>
           
           <div className="flex items-center gap-4">
+            <div className="relative">
+              <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1a1a1a] hover:bg-[#252525] transition text-sm">
+                <span className="text-gray-400">
+                  {workspaces.find((w) => w.workspaceId === tenantId)?.workspaceName || 'Workspace'}
+                </span>
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              </button>
+              <select
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                value={tenantId}
+                onChange={(e) => setActiveWorkspaceId(e.target.value || undefined)}
+              >
+                {workspaces.map((ws) => (
+                  <option key={ws.workspaceId} value={ws.workspaceId}>
+                    {ws.workspaceName}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="relative">
               <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1a1a1a] hover:bg-[#252525] transition text-sm">
                 <span className="text-gray-400">Select a meeting</span>

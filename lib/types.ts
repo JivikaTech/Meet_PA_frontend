@@ -207,3 +207,21 @@ export interface AnalyticsOverview {
   meetingTypes: Record<string, number>;
   recentMeetings: MeetingListItem[];
 }
+
+export interface WorkspaceMembership {
+  workspaceId: string;
+  workspaceName: string;
+  role: 'owner' | 'member';
+  createdAt: string;
+  createdBy?: string;
+}
+
+export interface AuthResponsePayload {
+  token: string;
+  user: {
+    userId: string;
+    email: string;
+    workspaceId: string;
+  };
+  workspaces: WorkspaceMembership[];
+}

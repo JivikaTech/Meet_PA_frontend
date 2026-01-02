@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, File, X } from 'lucide-react';
+import { Upload, File as FileIcon, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AudioUploaderProps {
@@ -96,7 +96,7 @@ export default function AudioUploader({ onFileSelect, isProcessing }: AudioUploa
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-start space-x-3 flex-1">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-                <File className="w-6 h-6 text-white" />
+                <FileIcon className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-slate-900 truncate">{selectedFile.name}</p>
